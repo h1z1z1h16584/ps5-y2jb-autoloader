@@ -416,6 +416,39 @@ async function updateIcon() {
   }
 
 
+  function ensureSplashPermissions() {
+      const splashPath = FINAL_PATH + "/splash.html";
+      try {
+          const splash_addr = alloc_string(splashPath);
+          const stat_buf = malloc(0x200n);
+          const st = syscall(SYSCALL.stat, splash_addr, stat_buf);
+          if (st !== 0n) {
+              log("[WARN] splash.html not found, skipping chmod.");
+              return;
+          }
+
+          // st_mode is a 16-bit field at offset 8 in the PS5 stat struct
+          const currentMode = Number(read16(stat_buf + 8n)) & 0o7777;
+          if (currentMode === 0o444) {
+              log("splash.html permissions already 444");
+              return;
+          }
+
+          const ret = syscall(SYSCALL.chmod, splash_addr, 0o444n);
+          if (ret === 0n) {
+              log("Set permissions for splash.html to 444 (was " + currentMode.toString(8) + ")");
+          } else {
+              log("[WARN] Failed to set permissions for splash.html. Code: " + toHex(ret));
+              send_notification("[WARN] Failed to set permissions for splash.html");
+          }
+      } catch (e) {
+          const msg = "[ERROR] chmod splash.html: " + (e && e.message ? e.message : String(e));
+          log(msg);
+          send_notification(msg);
+      }
+  }
+
+
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -611,15 +644,6 @@ async function updateIcon() {
                   // cleanup extracted files and old backup
                   await cleanUp(true);
               }
-
-              // attempt to update the icon
-              try {
-                  await updateIcon();
-              } catch (e) {
-                  const msg = (e && e.message) ? e.message : String(e);
-                  log("[WARN] Icon update failed: " + msg);
-                  send_notification("[WARN] Icon update failed: " + msg);
-              }
           }
       }
   }
@@ -710,29 +734,6 @@ async function updateIcon() {
       log("Extracted " + count + " files to " + outDir);
       send_notification("Extracted " + count + " files");
 
-      // set splash.html permission to 444 (read-only)
-      try {
-          const splashPath = EXTRACT_PATH + "/splash.html";
-          if (file_exists(splashPath)) {
-              const splash_addr = alloc_string(splashPath);
-              const mode = 0o444n; // Read-only (r--r--r--)
-              const ret = syscall(SYSCALL.chmod, splash_addr, mode);
-              if (ret === 0n) {
-                  log("Set permissions for splash.html to 444");
-              } else {
-                  log("[WARN] Failed to set permissions for splash.html. Code: " + toHex(ret));
-                  send_notification("[WARN] Failed to set permissions for splash.html");
-              }
-          } else {
-              log("[WARN] splash.html not found, skipping chmod.");
-          }
-      } catch (e) {
-          const msg = "[ERROR] chmod splash.html: " + (e && e.message ? e.message : String(e));
-          log(msg);
-          send_notification(msg);
-      }
-
-
       await sleep(200);
       log("Update processing complete");
 
@@ -786,5 +787,15 @@ async function updateIcon() {
 
   log("Y2JB Updater v" + Y2JB_UPDATER_VERSION + " by PLK");
   await update();
+  // make sure splash.html stays read-only, even when no update was applied
+  ensureSplashPermissions();
+  // always check the icon, even when no update was applied
+  try {
+      await updateIcon();
+  } catch (e) {
+      const msg = (e && e.message) ? e.message : String(e);
+      log("[WARN] Icon update failed: " + msg);
+      send_notification("[WARN] Icon update failed: " + msg);
+  }
 
 }

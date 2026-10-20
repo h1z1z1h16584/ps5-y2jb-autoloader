@@ -1187,7 +1187,6 @@ function trigger() {
         await load_localscript('lapse.js');
         await load_localscript('relapse.js');
         await load_localscript('update.js');
-        await load_localscript('icon_update.js');
         await load_localscript('autoload.js');
         if (typeof window.updateProgress === 'function') {
             window.updateProgress(20, "Running kernel exploit...");
@@ -1229,7 +1228,6 @@ function trigger() {
         }
 
         await start_update();
-        await start_icon_update();
         await sleep(1000);
         await start_autoload();
 
