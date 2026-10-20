@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.3
+- Updater: ensure `splash.html` permissions (read-only) even when no update zip was applied
+- Updated [unified-autoloader](https://github.com/itsPLK/ps5-unified-autoloader) to v0.1.6
+  - includes bundled [Payload Manager](https://github.com/itsPLK/ps5-payload-manager) v0.6.3
+
+## v1.0.2
+- Relapse:
+  - fixed fw 7.xx support
+  - droped the one-run-per-boot fail marker
+
 ## v1.0.1
 - Fixed Relapse reporting "reboot the PS5 first" on a console that was already rebooted
 
