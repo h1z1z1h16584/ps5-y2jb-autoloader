@@ -57,6 +57,7 @@ jobs:
 
             # 6. Set permissions
             chmod -R 777 /mnt/*
+            chmod 444 /mnt/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=/splash.html
 
             # 7. Unmount and detach
             umount /mnt
