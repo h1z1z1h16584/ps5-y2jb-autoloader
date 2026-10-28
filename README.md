@@ -118,7 +118,7 @@ etaHEN.elf
 * **[ntfargo](https://github.com/ntfargo)** - Thanks for providing V8 CVEs and CTF writeups
 * **abc and psfree team** - Lapse implementation
 * **[matem6](https://github.com/matem6)** - [P2JB](https://github.com/matem6/P2JB-Y2JB-Porting) implementation
-* **[edisnord](https://github.com/edisnord)** - [Relapse](https://github.com/edisnord/relapse-y2jb) implementation
+* **[edisnord](https://github.com/edisnord)** , **[notmaj0r](https://github.com/notmaj0r)** - Relapse implementations
 * **[flat_z](https://github.com/flatz) and [LM](https://github.com/LightningMods)** - Helping implement GPU rw using direct ioctl
 * **[john-tornblom](https://github.com/john-tornblom) and [EchoStretch](https://github.com/EchoStretch)** - Providing elfldr.elf payload
 * **[hammer-83](https://github.com/hammer-83)** - Various BD-J PS5 exploit references
