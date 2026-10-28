@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.4
+- Added missing FW 11.40 Relapse offsets (thanks [notmaj0r](https://github.com/notmaj0r))
+- Updated [elfldr](https://github.com/itsPLK/ps5-elfldr) to v0.27
+- CI: Set `splash.html` permissions to read-only in `download0.dat`
+
 ## v1.0.3
 - Updater: ensure `splash.html` permissions (read-only) even when no update zip was applied
 - Updated [unified-autoloader](https://github.com/itsPLK/ps5-unified-autoloader) to v0.1.6
