@@ -67,32 +67,33 @@ async function start_autoload() {
 
   // wait for elf_loader to start accepting connections
   let loader_active = false;
-  for (let i = 0; i < 50; i++) {
-    const sockfd = syscall(SYSCALL.socket, AF_INET, SOCK_STREAM, 0n);
-    if (sockfd >= 0n) {
-      const enable = malloc(4n);
-      write32(enable, 1n);
-      syscall(SYSCALL.setsockopt, sockfd, SOL_SOCKET, SO_REUSEADDR, enable, 4n);
+  const enable = malloc(4n);
+  write32(enable, 1n);
 
-      // Prepare sockaddr for 127.0.0.1:9021
-      const sockaddr = malloc(16n);
-      write8(sockaddr + 0n, 16n); // sin_len
-      write8(sockaddr + 1n, AF_INET); // sin_family
-      write16(sockaddr + 2n, BigInt(sceNetHtons(9021))); // sin_port
-      write8(sockaddr + 4n, 127n); // 127.0.0.1
-      write8(sockaddr + 5n, 0n);
-      write8(sockaddr + 6n, 0n);
-      write8(sockaddr + 7n, 1n);
+  // Prepare sockaddr for 127.0.0.1:9021
+  const sockaddr = malloc(16n);
+  write8(sockaddr + 0n, 16n); // sin_len
+  write8(sockaddr + 1n, AF_INET); // sin_family
+  write16(sockaddr + 2n, BigInt(sceNetHtons(9021))); // sin_port
+  write8(sockaddr + 4n, 127n); // 127.0.0.1
+  write8(sockaddr + 5n, 0n);
+  write8(sockaddr + 6n, 0n);
+  write8(sockaddr + 7n, 1n);
+
+  for (let i = 0; i < 200; i++) {
+    const sockfd = syscall(SYSCALL.socket, AF_INET, SOCK_STREAM, 0n);
+    if (sockfd >= 0n && sockfd < 0x100000n) {
+      syscall(SYSCALL.setsockopt, sockfd, SOL_SOCKET, SO_REUSEADDR, enable, 4n);
 
       const connect_ret = syscall(SYSCALL.connect, sockfd, sockaddr, 16n);
       syscall(SYSCALL.close, sockfd);
 
-      if (connect_ret >= 0n) {
+      if (connect_ret === 0n) {
         loader_active = true;
         break;
       }
     }
-    await sleep(200);
+    await sleep(25);
   }
 
   if (!loader_active) {
@@ -118,26 +119,14 @@ async function start_autoload() {
     await log(`Payload size: ${size} bytes`);
     
     const sockfd = syscall(SYSCALL.socket, AF_INET, SOCK_STREAM, 0n);
-    if (sockfd < 0n) {
+    if (sockfd < 0n || sockfd >= 0x100000n) {
       throw new Error("socket creation failed: " + toHex(sockfd));
     }
 
-    const enable = malloc(4n);
-    write32(enable, 1n);
     syscall(SYSCALL.setsockopt, sockfd, SOL_SOCKET, SO_REUSEADDR, enable, 4n);
 
-    // Prepare sockaddr for 127.0.0.1:9021
-    const sockaddr = malloc(16n);
-    write8(sockaddr + 0n, 16n);
-    write8(sockaddr + 1n, AF_INET);
-    write16(sockaddr + 2n, BigInt(sceNetHtons(9021)));
-    write8(sockaddr + 4n, 127n);
-    write8(sockaddr + 5n, 0n);
-    write8(sockaddr + 6n, 0n);
-    write8(sockaddr + 7n, 1n);
-
     const connect_ret = syscall(SYSCALL.connect, sockfd, sockaddr, 16n);
-    if (connect_ret < 0n) {
+    if (connect_ret !== 0n) {
       syscall(SYSCALL.close, sockfd);
       throw new Error("connect failed: " + toHex(connect_ret));
     }
@@ -146,8 +135,8 @@ async function start_autoload() {
     const total_sent = syscall(SYSCALL.write, sockfd, buffer, BigInt(size));
     syscall(SYSCALL.close, sockfd);
 
-    if (total_sent < 0n) {
-      throw new Error("error sending elf data: " + toHex(total_sent));
+    if (total_sent !== BigInt(size)) {
+      throw new Error(`error sending elf data: expected ${size}, sent ` + toHex(total_sent));
     }
 
     const msg = `Successfully loaded unified autoloader`;
