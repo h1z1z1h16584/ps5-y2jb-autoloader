@@ -341,63 +341,66 @@ async function start_update() {
     return { buffer: file_buffer, size: file_size };
   }
 
-function compare_buffers(buf1_ptr, buf2_ptr, size) {
-      const n = BigInt(size);
-      for (let i = 0n; i < n; i++) {
-          if (read8(buf1_ptr + i) !== read8(buf2_ptr + i)) {
-              return false; // Buffers are different
-          }
-      }
-      return true; // Buffers are identical
+  function get_file_size(path) {
+    const path_addr = alloc_string(path);
+    const stat_buf = malloc(0x200n);
+    const ret = syscall(SYSCALL.stat, path_addr, stat_buf);
+    if (ret !== 0n) return -1;
+    return Number(read64(stat_buf + 72n));
   }
-  
 
-async function updateIcon() {
+  function read_file_sample(path, len = 64) {
+    const path_addr = alloc_string(path);
+    const fd = syscall(SYSCALL.open, path_addr, O_RDONLY, 0n);
+    if (fd < 0n || fd >= 0x100000n) return null;
+    const buf = malloc(BigInt(len));
+    const bytes_read = syscall(SYSCALL.read, fd, buf, BigInt(len));
+    syscall(SYSCALL.close, fd);
+    if (bytes_read <= 0n) return null;
+    return { buf, len: Number(bytes_read) };
+  }
+
+  async function updateIcon() {
     const iconPath = "/user/appmeta/" + get_title_id() + "/icon0.png";
     const newIconPath = FINAL_PATH + "/icon0.png";
 
-    if (!file_exists(iconPath)) {
-        log("Icon file does not exist: " + iconPath);
-        return null;
-    }
-    
-    if (!file_exists(newIconPath)) {
-        log("New icon file not found in update package: " + newIconPath);
-        return null;
-    }
+    const curSize = get_file_size(iconPath);
+    if (curSize <= 0) return null;
 
-    let currentIcon = null;
-    let newIcon = null;
-    let areIdentical = false;
+    const newSize = get_file_size(newIconPath);
+    if (newSize <= 0) return null;
 
     try {
-        log("Reading current icon from: " + iconPath);
-        currentIcon = read_file_to_buffer(iconPath);
-        log("Current icon size: " + currentIcon.size + " bytes");
-
-        log("Reading new icon from: " + newIconPath);
-        newIcon = read_file_to_buffer(newIconPath);
-        log("New icon size: " + newIcon.size + " bytes");
-
-        if (currentIcon.size !== newIcon.size) {
-            log("Icons are different (size mismatch).");
-            areIdentical = false;
-        } else {
-            log("Icons are the same size. Comparing contents...");
-            areIdentical = compare_buffers(currentIcon.buffer, newIcon.buffer, currentIcon.size);
+        let areIdentical = false;
+        if (curSize === newSize) {
+            // Fast check: sample the first 64 bytes (header + chunk data)
+            const s1 = read_file_sample(iconPath, 64);
+            const s2 = read_file_sample(newIconPath, 64);
+            if (s1 && s2 && s1.len === s2.len) {
+                areIdentical = true;
+                const words = Math.floor(s1.len / 8);
+                for (let i = 0; i < words; i++) {
+                    const off = BigInt(i * 8);
+                    if (read64(s1.buf + off) !== read64(s2.buf + off)) {
+                        areIdentical = false;
+                        break;
+                    }
+                }
+            }
         }
 
-        if (!areIdentical) {
-            log("Icons are different. Updating icon...");
-            const writeSuccess = write_buffer_to_file(iconPath, newIcon.buffer, newIcon.size);
-            if (writeSuccess) {
-                log("Icon updated successfully at: " + iconPath);
-                send_notification("Icon updated successfully.");
-            } else {
-                log("Failed to update icon at: " + iconPath);
-            }
+        if (areIdentical) {
+            return;
+        }
+
+        log("Updating app icon...");
+        const newIcon = read_file_to_buffer(newIconPath);
+        const writeSuccess = write_buffer_to_file(iconPath, newIcon.buffer, newIcon.size);
+        if (writeSuccess) {
+            log("Icon updated successfully at: " + iconPath);
+            send_notification("Icon updated successfully.");
         } else {
-            log("Icons are identical. No update needed.");
+            log("Failed to update icon at: " + iconPath);
         }
 
     } catch (e) {
@@ -570,35 +573,40 @@ async function updateIcon() {
       }
   }
 
-  const updatePaths = [];
-  for (let i = 0; i <= 7; i++) {
-      updatePaths.push(`/mnt/usb${i}/y2jb_update.zip`);
-      updatePaths.push(`/mnt/usb${i}/ps5_autoloader/y2jb_update.zip`);
-  }
-  updatePaths.push("/data/y2jb_update.zip");
-  updatePaths.push("/data/ps5_autoloader/y2jb_update.zip");
-
-  async function update() {
-    let updateFound = false;
-    let updatePath = null;
-    for (const path of updatePaths) {
-      if (file_exists(path)) {
-        log("Found Y2JB update file at: " + path);
-        send_notification("Found Y2JB update file at: " + path);
-        updateFound = true;
-        updatePath = path;
-          break;
+  function get_potential_update_paths() {
+    const paths = [];
+    for (let i = 0; i <= 7; i++) {
+      const usbBase = `/mnt/usb${i}`;
+      if (file_exists(usbBase)) {
+        paths.push(`${usbBase}/y2jb_update.zip`);
+        paths.push(`${usbBase}/ps5_autoloader/y2jb_update.zip`);
       }
     }
+    paths.push('/data/y2jb_update.zip');
+    paths.push('/data/ps5_autoloader/y2jb_update.zip');
+    return paths;
+  }
 
-      if (!updateFound) {
-        log("No Y2JB update file found");
-      } else {
-        log("Starting Y2JB update from: " + updatePath);
-        if (typeof window.updateProgress === 'function') {
-            window.updateProgress(50, "Updating Y2JB...");
-        }
-        await process_update(updatePath);
+  function find_update_file() {
+    for (const path of get_potential_update_paths()) {
+      if (file_exists(path)) return path;
+    }
+    return null;
+  }
+
+  async function update() {
+    const updatePath = find_update_file();
+
+    if (!updatePath) {
+      log("No Y2JB update file found");
+    } else {
+      log("Found Y2JB update file at: " + updatePath);
+      send_notification("Found Y2JB update file at: " + updatePath);
+      log("Starting Y2JB update from: " + updatePath);
+      if (typeof window.updateProgress === 'function') {
+          window.updateProgress(50, "Updating Y2JB...");
+      }
+      await process_update(updatePath);
 
           // Verify extracted update before renaming
           const verifyRes = await verify_update(EXTRACT_PATH);
@@ -747,7 +755,7 @@ async function updateIcon() {
 
   async function cleanUp(remove_update_packages) {
       if (remove_update_packages) {
-          for (const path of updatePaths) {
+          for (const path of get_potential_update_paths()) {
               if (file_exists(path)) {
                   const path_addr = alloc_string(path);
                   const ret = syscall(SYSCALL.unlink, path_addr);

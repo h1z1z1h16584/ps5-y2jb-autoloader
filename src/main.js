@@ -42,28 +42,6 @@ function get_cobalt_buildnumber() {
     await load_localscript('global.js');
 })();
 
-let NETWORK_LOGGING = false;
-// Use setlogserver.js payload to change server url at runtime
-let LOG_SERVER = 'http://192.168.1.180:8080/log';
-
-async function checkLogServer() {
-    try {
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 800)
-        );
-        
-        const fetchPromise = fetch(LOG_SERVER, {
-            method: 'POST',
-            body: 'Log server check from Y2JB'
-        });
-        
-        await Promise.race([fetchPromise, timeoutPromise]);
-        
-        NETWORK_LOGGING = true;
-    } catch (e) {
-        NETWORK_LOGGING = false;
-    }
-}
 
 const baseWidth = 1920;
 const baseHeight = 1080;
@@ -101,21 +79,12 @@ async function log(msg) {
     while (outputElement.children.length > maxLines) {
         outputElement.removeChild(outputElement.children[0]);
     }
-    
+
     await new Promise(resolve => {
         requestAnimationFrame(() => {
             setTimeout(resolve, 1);
         });
     });
-        
-    if (NETWORK_LOGGING) {
-        try {
-            await fetch(LOG_SERVER, {
-                method: 'POST',
-                body: message,
-            });
-        } catch (e) { }
-    }
 }
 
 function toHex(num) {
@@ -1079,8 +1048,6 @@ function trigger() {
                 window.uiLog(text, isSystemNotify ? "error" : "info");
             }
         };
-
-        await checkLogServer();
 
         if (Y2_OFFSET === Y2_OFFSET_403) {
             // Thanks ufm42 for better implementation
