@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.0
+- Relapse: Switched to [notmaj0r](https://github.com/notmaj0r)'s port
+- Autoloader: Fix socket readiness polling for elfldr, eliminating the 1-second startup delay
+- Performance: Removed network log server check
+- Updater optimizations
+
 ## v1.0.4
 - Added missing FW 11.40 Relapse offsets (thanks [notmaj0r](https://github.com/notmaj0r))
 - Updated [elfldr](https://github.com/itsPLK/ps5-elfldr) to v0.27
