@@ -4,7 +4,7 @@
 <h1 align="center">PS5 Y2JB Autoloader</h1>
 <h3 align="center">Fork of <a href="https://github.com/Gezine/Y2JB">Y2JB</a></h3>
 &nbsp;
-<p align="center">Automatically loads the kernel exploit and your elf payloads.<br>Supports PS5 firmwares 4.03-13.60<br><i>(Note: FW 11.40 is currently not supported)</i></p>
+<p align="center">Automatically loads the kernel exploit and your elf payloads.<br>Supports PS5 firmwares 4.03-13.60</p>
 
 <p align="center">
     <b>Other Autoloaders:</b><br>
@@ -77,8 +77,6 @@ You can also restore [Y2JB](https://github.com/Gezine/Y2JB) (remote loader) syst
 
 > [!NOTE]
 > Relapse requires an active network interface (Wi-Fi or Ethernet connected to a local network; Internet access is not required). On FW 7.00–10.01, it is used when a network interface is detected (falling back to Lapse otherwise). On FW 10.20–13.60, an active network interface is required.
->
-> **Note:** Firmware 11.40 is currently not supported.
 
 ## Additional Info
 

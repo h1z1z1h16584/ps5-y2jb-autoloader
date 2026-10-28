@@ -1197,8 +1197,7 @@ function trigger() {
         const has_net = has_network_interface();
         const relapse_supported = compare_version(FW_VERSION, "7.00") >= 0 &&
                                   compare_version(FW_VERSION, "13.60") <= 0 &&
-                                  FW_VERSION !== "9.05" &&
-                                  FW_VERSION !== "11.40";
+                                  FW_VERSION !== "9.05";
 
         if (relapse_supported && has_net) {
             exploit_success = await start_relapse();
