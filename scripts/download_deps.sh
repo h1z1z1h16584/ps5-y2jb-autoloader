@@ -67,8 +67,18 @@ ELFLDR_URL=$(resolve_dep_release_url "third_party/ps5-elfldr" "itsPLK/ps5-elfldr
 echo "Resolving release URL for pinned ps5-kexp..."
 KEXP_URL=$(resolve_dep_release_url "third_party/ps5-kexp" "itsPLK/ps5-kexp" '\.bin')
 
-echo "Resolving release URL for pinned ps5-unified-autoloader..."
-AUTOLOADER_URL=$(resolve_dep_release_url "third_party/ps5-unified-autoloader" "itsPLK/ps5-unified-autoloader" '\.elf')
+echo "Targeting ps5-unified-autoloader release v0.1.5-915a65e..."
+AUTOLOADER_TAG="v0.1.5-915a65e"
+AUTOLOADER_REPO="itsPLK/ps5-unified-autoloader"
+
+# Fetch release metadata specifically for tag v0.1.5-915a65e
+RELEASE_JSON=$("${CURL_CMD[@]}" "https://api.github.com/repos/$AUTOLOADER_REPO/releases/tags/$AUTOLOADER_TAG")
+AUTOLOADER_URL=$(echo "$RELEASE_JSON" | grep -o "https://github.com/$AUTOLOADER_REPO/releases/download/[^\"]*\.elf" | head -n 1)
+
+if [ -z "$AUTOLOADER_URL" ]; then
+    echo "Error: Could not find .elf asset in release $AUTOLOADER_TAG for $AUTOLOADER_REPO" >&2
+    exit 1
+fi
 
 ELFLDR_VER=$(echo "$ELFLDR_URL" | grep -oE 'download/[^/]+' | cut -d'/' -f2)
 KEXP_VER=$(echo "$KEXP_URL" | grep -oE 'download/[^/]+' | cut -d'/' -f2)
