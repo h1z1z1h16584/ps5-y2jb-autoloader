@@ -1,11 +1,22 @@
 name: Build and Release Y2JB Autoloader
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to publish/update (e.g. v1.1 or latest)'
+        required: true
+        default: 'latest'
+      is_prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: false
   push:
-    branches: [ main, master ]
     tags:
       - 'v*'
-  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -49,19 +60,23 @@ jobs:
           chmod +x build.sh
           bash build.sh
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: y2jb-autoloader-build
-          path: |
-            build/download0.dat
-            build/update.zip
-            build/usb-y2jb-installer.elf
+      - name: Determine Release Target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.release_tag }}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ github.event.inputs.is_prerelease }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Publish GitHub Release (On Tag)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish/Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.target.outputs.tag }}
+          name: ${{ steps.target.outputs.tag }}
+          prerelease: ${{ steps.target.outputs.prerelease == 'true' }}
           files: |
             build/download0.dat
             build/update.zip
