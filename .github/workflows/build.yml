@@ -1,0 +1,70 @@
+name: Build and Release Y2JB Autoloader
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies and Clang 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget unzip patchelf tcl
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          echo "LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config" >> $GITHUB_ENV
+
+      - name: Install PS5 Payload SDK
+        run: |
+          curl -fsSL -o /tmp/sdk.zip https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
+          sudo unzip -q /tmp/sdk.zip -d /opt
+          sudo chmod -R 755 /opt/ps5-payload-sdk
+          echo "PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk" >> $GITHUB_ENV
+
+      - name: Build USB Installer ELF
+        run: |
+          chmod +x ./build_usb_payload.sh
+          ./build_usb_payload.sh
+
+      - name: Download Third-Party Dependencies
+        run: |
+          chmod +x scripts/download_deps.sh
+          bash scripts/download_deps.sh
+
+      - name: Build download0.dat and update.zip
+        run: |
+          chmod +x build.sh
+          bash build.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: y2jb-autoloader-build
+          path: |
+            build/download0.dat
+            build/update.zip
+            build/usb-y2jb-installer.elf
+
+      - name: Publish GitHub Release (On Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/download0.dat
+            build/update.zip
+            build/usb-y2jb-installer.elf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

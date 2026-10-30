@@ -11,4 +11,10 @@ fi
 
 mkdir -p build
 make -C payload
-echo "Built build/usb-y2jb-installer.elf successfully."
+
+# Copy to staging locations so packaging scripts include it
+mkdir -p src/payloads
+cp build/usb-y2jb-installer.elf src/payloads/usb-installer.elf
+cp build/usb-y2jb-installer.elf src/usb-installer.elf
+
+echo "Built and staged usb-installer.elf successfully."
