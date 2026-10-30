@@ -7,3 +7,7 @@ build_dir/
 download0.dat
 download0/
 y2jb_update/
+
+# Payload build outputs
+payload/*.o
+build/*.elf
