@@ -1,112 +1,74 @@
-name: Stable Build and Release
+name: Build Stable Release
 
 on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  build:
+    runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install dependencies and Clang 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl wget unzip patchelf tcl
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y clang-18 lld-18 llvm-18
+          echo "LLVM_CONFIG=/usr/lib/llvm-18/bin/llvm-config" >> $GITHUB_ENV
+
+      - name: Install PS5 Payload SDK
+        run: |
+          curl -fsSL -o /tmp/sdk.zip https://github.com/ps5-payload-dev/sdk/releases/latest/download/ps5-payload-sdk.zip
+          sudo unzip -q /tmp/sdk.zip -d /opt
+          sudo chmod -R 755 /opt/ps5-payload-sdk
+          echo "PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk" >> $GITHUB_ENV
+
+      - name: Build USB Installer ELF
+        run: |
+          chmod +x ./build_usb_payload.sh
+          ./build_usb_payload.sh
+
+      - name: Download Third-Party Dependencies
+        run: |
+          chmod +x scripts/download_deps.sh
+          bash scripts/download_deps.sh
+
+      - name: Build download0.dat and update.zip
+        run: |
+          chmod +x build.sh
+          bash build.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          python-version: '3.x'
+          name: stable-build-artifacts
+          path: |
+            build/download0.dat
+            build/update.zip
+            build/usb-y2jb-installer.elf
 
-      - name: Build Package
-        id: build_package
-        run: ./build.sh --stable --download-deps
-
-      - name: Prepare download0 directory
-        run: |
-          mkdir -p download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=
-          unzip -q y2jb_update.zip -d download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=
-          rm -f download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=/update-info.txt
-
-      - name: Create UFS2 download0.dat in FreeBSD
-        uses: vmactions/freebsd-vm@v1
+      - name: Publish Stable Release (On Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
-          release: "14.2"
-          copyback: true
-          run: |
-            set -e
-
-            # 1. Create 336789504 byte image file
-            truncate -s 336789504 download0.dat
-
-            # 2. Attach as memory disk (returns e.g. "md0")
-            MD=$(mdconfig -a -t vnode -f "$(pwd)/download0.dat")
-
-            # 3. Create UFS2 filesystem
-            # -b 32768 (Block size), -f 4096 (Fragment size)
-            newfs -O 2 -b 32768 -f 4096 /dev/${MD}
-
-            # 4. Mount
-            mount /dev/${MD} /mnt
-
-            # 5. Copy all contents
-            cp -R download0/* /mnt/
-
-            # 6. Set permissions
-            chmod -R 777 /mnt/*
-            chmod 444 /mnt/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=/splash.html
-
-            # 7. Unmount and detach
-            umount /mnt
-            mdconfig -d -u ${MD}
-
-      - name: Verify image and cleanup
-        run: |
-          file download0.dat
-          rm -rf download0
-
-      - name: Get Version
-        id: get_version
-        run: |
-          VERSION=$(make print-version BUILD_TYPE=stable)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          TITLE=$(echo "${VERSION}" | cut -d'-' -f1)
-          echo "title=${TITLE}" >> $GITHUB_OUTPUT
-          LAST_STABLE_TAG=$(git tag --sort=-creatordate | grep -v "\-dev\-" | grep -v "^${VERSION}$" | head -n 1)
-          echo "last_stable_tag=${LAST_STABLE_TAG}" >> $GITHUB_OUTPUT
-
-      - name: Create Stable Release
+          files: |
+            build/download0.dat
+            build/update.zip
+            build/usb-y2jb-installer.elf
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ steps.get_version.outputs.version }}
-          RELEASE_TITLE: ${{ steps.get_version.outputs.title }}
-          TARGET_COMMIT: ${{ github.sha }}
-          LAST_STABLE_TAG: ${{ steps.get_version.outputs.last_stable_tag }}
-          ELFLDR_VER: ${{ steps.build_package.outputs.elfldr_ver }}
-          KEXP_VER: ${{ steps.build_package.outputs.kexp_ver }}
-          AUTOLOADER_VER: ${{ steps.build_package.outputs.unified_autoloader_ver }}
-        run: |
-          cat <<EOF > release_notes.md
-          - ### Changelog:
-
-          **Full Changelog (since last stable release)**: https://github.com/${GITHUB_REPOSITORY}/compare/${LAST_STABLE_TAG}...${TAG_NAME}
-
-          ---
-          <details>
-          <summary>Bundled Binaries</summary>
-
-          This build integrates the following external dependency versions:
-          - [itsPLK/ps5-elfldr](https://github.com/itsPLK/ps5-elfldr): [${ELFLDR_VER}](https://github.com/itsPLK/ps5-elfldr/releases/tag/${ELFLDR_VER})
-          - [itsPLK/ps5-kexp](https://github.com/itsPLK/ps5-kexp): [${KEXP_VER}](https://github.com/itsPLK/ps5-kexp/releases/tag/${KEXP_VER})
-          - [itsPLK/ps5-unified-autoloader](https://github.com/itsPLK/ps5-unified-autoloader): [${AUTOLOADER_VER}](https://github.com/itsPLK/ps5-unified-autoloader/releases/tag/${AUTOLOADER_VER})
-
-          </details>
-          EOF
-
-          gh release create "$TAG_NAME" y2jb_update.zip download0.dat \
-            --target "$TARGET_COMMIT" \
-            --title "$RELEASE_TITLE" \
-            --notes-file release_notes.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
