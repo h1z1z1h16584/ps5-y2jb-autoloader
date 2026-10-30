@@ -8,6 +8,11 @@ on:
       - "v*"
       - "[0-9]+.*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to publish/update (e.g. v1.0 or latest)'
+        required: true
+        default: 'v1.0'
 
 permissions:
   contents: write
@@ -23,15 +28,10 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Install System Dependencies and Clang 18
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl wget unzip zip patchelf tcl
+          sudo apt-get install -y build-essential curl wget unzip zip patchelf tcl python3
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
           echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
@@ -55,22 +55,60 @@ jobs:
           chmod +x scripts/download_deps.sh
           bash scripts/download_deps.sh
 
-      - name: Compile and Package Autoloader
+      - name: Build y2jb_update.zip
         run: |
           chmod +x build.sh
-          bash build.sh || make
-          # Ensure generated files are gathered into build/ if output to root
-          mkdir -p build
-          [ -f download0.dat ] && mv download0.dat build/
-          [ -f update.zip ] && mv update.zip build/
-          ls -la build/
+          bash build.sh
 
-      - name: Publish Stable Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Prepare download0 directory
+        run: |
+          mkdir -p download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=
+          unzip -q y2jb_update.zip -d download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=
+          rm -f download0/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=/update-info.txt
+
+      - name: Create UFS2 download0.dat in FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          run: |
+            truncate -s 336789504 download0.dat
+            MD=$(mdconfig -a -t vnode -f "$(pwd)/download0.dat")
+            newfs -O 2 -U "/dev/$MD"
+            mount "/dev/$MD" /mnt
+            cp -R download0/* /mnt/
+            sync
+            umount /mnt
+            mdconfig -d -u "$MD"
+
+      - name: Prepare Release Artifacts
+        run: |
+          mkdir -p build
+          cp y2jb_update.zip build/y2jb_update.zip
+          cp y2jb_update.zip build/update.zip
+          mv download0.dat build/download0.dat
+          rm -rf download0
+          ls -lh build/
+
+      - name: Determine Target Tag
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.release_tag }}" >> $GITHUB_OUTPUT
+          elif [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish Release Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.target.outputs.tag }}
+          name: ${{ steps.target.outputs.tag }}
+          overwrite_files: true
           files: |
             build/download0.dat
+            build/y2jb_update.zip
             build/update.zip
             build/usb-y2jb-installer.elf
         env:
