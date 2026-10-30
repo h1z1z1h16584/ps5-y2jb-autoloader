@@ -20,6 +20,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: "node24"
 
     steps:
       - name: Checkout repository
@@ -83,8 +85,7 @@ jobs:
       - name: Prepare Release Artifacts
         run: |
           mkdir -p build
-          cp y2jb_update.zip build/y2jb_update.zip
-          cp y2jb_update.zip build/update.zip
+          mv y2jb_update.zip build/y2jb_update.zip
           mv download0.dat build/download0.dat
           rm -rf download0
           ls -lh build/
@@ -109,7 +110,6 @@ jobs:
           files: |
             build/download0.dat
             build/y2jb_update.zip
-            build/update.zip
             build/usb-y2jb-installer.elf
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
