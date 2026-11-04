@@ -68,6 +68,8 @@ Install YouTube (`PPSA01650` / `PPSA01651` / `PPSA01652`):
 
 Then FTP `download0.dat` from Releases to `/user/download/PPSA0165*/`.
 
+> **Note:** Releases ship both `download0.dat` (raw UFS2 image, ~321MB) and `download0.dat.zip` (~1-2MB). If you download the `.zip`, **extract it first** to get the raw `download0.dat` — the PS5 needs the uncompressed image.
+
 ### Non-Jailbroken PS5
 You might find a system backup with pre-configured Autoloader (I don't distribute such backups).
 

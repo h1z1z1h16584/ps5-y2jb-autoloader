@@ -67,6 +67,7 @@ jobs:
         run: |
           file download0.dat
           rm -rf download0
+          zip -9 download0.dat.zip download0.dat
 
       - name: Get Version
         id: get_version
@@ -103,7 +104,7 @@ jobs:
           </details>
           EOF
 
-          gh release create "$TAG_NAME" y2jb_update.zip download0.dat \
+          gh release create "$TAG_NAME" y2jb_update.zip download0.dat download0.dat.zip \
             --target "$TARGET_COMMIT" \
             --title "$TAG_NAME" \
             --notes-file release_notes.md \

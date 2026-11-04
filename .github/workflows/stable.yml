@@ -99,9 +99,12 @@ jobs:
           mkdir -p build
           mv y2jb_update.zip build/y2jb_update.zip
           mv download0.dat build/download0.dat
+          # Keep the raw UFS2 image AND ship a compressed copy.
+          # A fresh newfs image is mostly zeroed free space, so this
+          # compresses from ~321MB to ~1-2MB.
+          zip -9 build/download0.dat.zip download0.dat
           rm -rf download0
           ls -lh build/
-
       - name: Determine Target Tag
         id: target
         run: |
