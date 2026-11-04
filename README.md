@@ -17,7 +17,6 @@
  <img src="./y2jb_screenshot.png" width="600" />
 </p>
 
-
 ## How to Use
 
 There are two ways to use the autoloader:
@@ -51,133 +50,137 @@ For a fixed, automated payload chain, you can configure payloads manually:
 
 You can update the autoloader by simply placing **`y2jb_update.zip`** (from the [Releases page](https://github.com/itsPLK/ps5_y2jb_autoloader/releases)) on the **root** of a USB drive, and starting the app.
 
-## Setup Instructions
-
-Installation is the same as the original [Y2JB](https://github.com/Gezine/Y2JB/blob/main/README.md) (remote loader).
-
-## USB Installer Payload
-
-A standalone payload is included to install `download0.dat` offline from an inserted USB drive directly to the YouTube directory on the console (`/user/download/PPSA0165*`).
-
-### Building the Payload
-Requires [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk).
 ```bash
-./build_usb_payload.sh
-Usage
-Format a USB drive as exFAT or FAT32.
+# Place y2jb_update.zip on the root of a USB drive, then start YouTube on the PS5.
+# The autoloader will detect and apply the update automatically.
+```
+##Setup Instructions
+Installation is the same as the original Y2JB (remote loader).
 
-Place download0.dat.zip or download0.dat onto the root of the USB drive.
+Jailbroken PS5 (Webkit, Lua, BD-JB)
+Install YouTube (PPSA01650 / PPSA01651 / PPSA01652):
 
-Insert the USB drive into your PS5.
+Firmware	YouTube Version
+4.03 – 12.40	v01.000.003
+12.60 – 13.20	v01.000.030
+13.40 – 13.60	v01.009.253
+Then FTP download0.dat from Releases to /user/download/PPSA0165*/.
 
-Send build/usb-y2jb-installer.elf to port 9021 on your console (e.g., using Netcat):
+bash
+# Example: FTP the raw image to the YouTube title directory
+ftp <PS5_IP>
+# then:
+# put download0.dat /user/download/PPSA01650/download0.dat
+Note: Releases ship both download0.dat (raw UFS2 image, ~321MB) and download0.dat.zip (~1-2MB). If you download the .zip, extract it first to get the raw download0.dat — the PS5 needs the uncompressed image. Alternatively, use the USB Installer payload below, which extracts the .zip directly on the console.
 
-Bash
-nc -w 3 <PS5_IP> 9021 < build/usb-y2jb-installer.elf
-
-
-
-### Jailbroken PS5 (Webkit, Lua, BD-JB)
-
-Install YouTube (`PPSA01650` / `PPSA01651` / `PPSA01652`):
-
-| Firmware | YouTube Version |
-| :--- | :--- |
-| **4.03 – 12.40** | `v01.000.003` |
-| **12.60 – 13.20** | `v01.000.030` |
-| **13.40 – 13.60** | `v01.009.253` |
-
-Then FTP `download0.dat` from Releases to `/user/download/PPSA0165*/`.
-
-> **Note:** Releases ship both `download0.dat` (raw UFS2 image, ~321MB) and `download0.dat.zip` (~1-2MB). If you download the `.zip`, **extract it first** to get the raw `download0.dat` — the PS5 needs the uncompressed image.
-
-### Non-Jailbroken PS5
+bash
+# If you downloaded download0.dat.zip, extract before FTP:
+unzip download0.dat.zip
+# -> produces download0.dat, then FTP it as shown above
+Non-Jailbroken PS5
 You might find a system backup with pre-configured Autoloader (I don't distribute such backups).
 
-You can also restore [Y2JB](https://github.com/Gezine/Y2JB) (remote loader) system backup, and then:
-- use FTP to place `download0.dat` from releases page in `/user/download/PPSA01650`
-- or install separate YT app from different region, and use FTP to place `download0.dat` from releases page in `/user/download/PPSA0165*/`
+You can also restore Y2JB (remote loader) system backup, and then:
 
-> [!NOTE]
-> Relapse requires an active network interface (Wi-Fi or Ethernet connected to a local network; Internet access is not required). On FW 7.00–10.01, it is used when a network interface is detected (falling back to Lapse otherwise). On FW 10.20–13.60, an active network interface is required.
+bash
+# Option A: FTP download0.dat into the default title directory
+ftp <PS5_IP>
+# put download0.dat /user/download/PPSA01650/download0.dat
 
-## Additional Info
+# Option B: install a YouTube app from another region and FTP there instead
+# put download0.dat /user/download/PPSA0165*/download0.dat
+[!NOTE]
+Relapse requires an active network interface (Wi-Fi or Ethernet connected to a local network; Internet access is not required). On FW 7.00–10.01, it is used when a network interface is detected (falling back to Lapse otherwise). On FW 10.20–13.60, an active network interface is required.
 
-<Details>
-<Summary><i>How to have different autoload configs for multiple YT apps?</i></Summary>
+USB Installer Payload
+A standalone payload is included to install download0.dat offline from an inserted USB drive directly to the YouTube directory on the console (/user/download/PPSA0165*).
 
-If you want to use multiple YT apps from different regions,
-name your directory <code>ps5_autoloader_[TITLE_ID]</code>, e.g. <code>ps5_autoloader_PPSA01650</code>
-this will allow you to have different autoload.txt files for each app
-(these directories always take precedence over the generic ps5_autoloader directory)
-</Details>
+Building the Payload
+Requires ps5-payload-sdk.
 
-<Details>
-<Summary><i>How to use custom ELF Loader version?</i></Summary>
-
-By default, the autoloader uses a custom version of **elfldr** that only accepts connections from the PS5 itself (localhost). This improves security by preventing other devices on your network from sending payloads to your console.
-
-If you want to use a "normal" ELF Loader that allows sending payloads from any device:
-1. Place your custom ELF Loader (e.g. `elfldr.elf`) in the `ps5_autoloader` directory.
-2. Add `elfldr.elf` to your `autoload.txt`.
-3. **Note**: If you are loading other payloads right after `elfldr.elf` in your `autoload.txt`, add a sleep command immediately after it (like `!4000` to sleep for 4 seconds) to give the new ELF Loader time to start up and listen before subsequent payloads are sent.
-
-Example `autoload.txt`:
-```text
-# Load custom ELF Loader
-elfldr.elf
-# Give it 4 seconds to start up (only needed if sending more payloads)
-!4000
-# Send other payloads
-etaHEN.elf
-```
-</Details>
-
-## Credits
-
-* **[Gezine](https://github.com/Gezine)** - creator of the original [Y2JB](https://github.com/Gezine/Y2JB)
-* **[shahrilnet](https://github.com/shahrilnet), [null_ptr](https://github.com/n0llptr)** - Referenced many codes from [Remote Lua Loader](https://github.com/shahrilnet/remote_lua_loader)
-* **[BenNoxXD](https://github.com/BenNoxXD)** - [ClosePlayer](https://github.com/BenNoxXD/PS5-BDJ-HEN-loader) reference
-* **[ntfargo](https://github.com/ntfargo)** - Thanks for providing V8 CVEs and CTF writeups
-* **abc and psfree team** - Lapse implementation
-* **[matem6](https://github.com/matem6)** - [P2JB](https://github.com/matem6/P2JB-Y2JB-Porting) implementation
-* **[edisnord](https://github.com/edisnord)** , **[notmaj0r](https://github.com/notmaj0r)** - Relapse implementations
-* **[flat_z](https://github.com/flatz) and [LM](https://github.com/LightningMods)** - Helping implement GPU rw using direct ioctl
-* **[john-tornblom](https://github.com/john-tornblom) and [EchoStretch](https://github.com/EchoStretch)** - Providing elfldr.elf payload
-* **[hammer-83](https://github.com/hammer-83)** - Various BD-J PS5 exploit references
-* **[zecoxao](https://github.com/zecoxao), [idlesauce](https://github.com/idlesauce), and [TheFlow](https://github.com/theofficialflow)** - Helping troubleshoot dlsym
-* **[Dr.Yenyen](https://github.com/DrYenyen) and PS5 R&D community** - Testing Y2JB
-* **Rush** - Creating Y2JB backup file
-* **[Feyzee61](https://github.com/Feyzee61)** - [download0.dat generator workflow](https://github.com/Feyzee61/ps5-y2jb-autoloader/blob/main/.github/workflows/build.yml)
-* **[ufm42](https://github.com/ufm42)** - [kexp](https://github.com/ufm42/kexp) used for PS5 post JB all-in-one shellcode
-
-## License
-
-This project is licensed under the **GPL-3.0 License**.
-
-The original **Y2JB** base code remains under its original **MIT License** (see [LICENSE-MIT](LICENSE-MIT)).  
-All unique modifications and additions in this fork are licensed under **GPL-3.0**.
-
-## Disclaimer
-
-This tool is provided as-is for research and development purposes only. Use at your own risk. The developers are not responsible for any damage, data loss, or consequences resulting from the use of this software.
-
-## USB Installer Payload
-
-A standalone payload is included to install `download0.dat` offline from an inserted USB drive directly to the YouTube directory on the console (`/user/download/PPSA0165*`).
-
-### Building the Payload
-Requires [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk).
-```bash
+bash
 ./build_usb_payload.sh
 Usage
-Format a USB drive as exFAT or FAT32.
+bash
+# 1. Format a USB drive as exFAT or FAT32.
 
-Place download0.dat.zip or download0.dat onto the root of the USB drive.
+# 2. Place EITHER download0.dat.zip OR download0.dat on the root of the USB drive.
+#    If both are present, the .zip is preferred (smaller transfer, streamed extraction).
+#    The payload extracts/copies the image directly to /user/download/PPSA0165*/download0.dat.
 
-Insert the USB drive into your PS5.
+# 3. Insert the USB drive into your PS5.
 
-Send build/usb-y2jb-installer.elf to port 9021 on your console (e.g., using Netcat):
-
-Bash
+# 4. Send the installer ELF to port 9021 on the console:
 nc -w 3 <PS5_IP> 9021 < build/usb-y2jb-installer.elf
+Additional Info
+<Details> <Summary><i>How to have different autoload configs for multiple YT apps?</i></Summary>
+If you want to use multiple YT apps from different regions, name your directory ps5_autoloader_[TITLE_ID], e.g. ps5_autoloader_PPSA01650. This allows you to have different autoload.txt files for each app (these directories always take precedence over the generic ps5_autoloader directory).
+
+bash
+# Example layout on USB root:
+# /ps5_autoloader_PPSA01650/autoload.txt
+# /ps5_autoloader_PPSA01651/autoload.txt
+# /ps5_autoloader/autoload.txt   (generic fallback)
+</Details><Details> <Summary><i>How to use custom ELF Loader version?</i></Summary>
+By default, the autoloader uses a custom version of elfldr that only accepts connections from the PS5 itself (localhost). This improves security by preventing other devices on your network from sending payloads to your console.
+
+If you want to use a "normal" ELF Loader that allows sending payloads from any device:
+
+bash
+# 1. Place your custom ELF Loader (e.g. elfldr.elf) in the ps5_autoloader directory.
+
+# 2. Add elfldr.elf to your autoload.txt.
+
+# 3. If you are loading other payloads right after elfldr.elf in autoload.txt,
+#    add a sleep command immediately after it (like !4000 for 4 seconds)
+#    to give the new ELF Loader time to start up and listen before
+#    subsequent payloads are sent.
+
+# Example autoload.txt:
+# --------------------
+# # Load custom ELF Loader
+# elfldr.elf
+# # Give it 4 seconds to start up (only needed if sending more payloads)
+# !4000
+# # Send other payloads
+# etaHEN.elf
+</Details>
+Credits
+Gezine - creator of the original Y2JB
+
+shahrilnet, null_ptr - Referenced many codes from Remote Lua Loader
+
+BenNoxXD - ClosePlayer reference
+
+ntfargo - Thanks for providing V8 CVEs and CTF writeups
+
+abc and psfree team - Lapse implementation
+
+matem6 - P2JB implementation
+
+edisnord , notmaj0r - Relapse implementations
+
+flat_z and LM - Helping implement GPU rw using direct ioctl
+
+john-tornblom and EchoStretch - Providing elfldr.elf payload
+
+hammer-83 - Various BD-J PS5 exploit references
+
+zecoxao, idlesauce, and TheFlow - Helping troubleshoot dlsym
+
+Dr.Yenyen and PS5 R&D community - Testing Y2JB
+
+Rush - Creating Y2JB backup file
+
+Feyzee61 - download0.dat generator workflow
+
+ufm42 - kexp used for PS5 post JB all-in-one shellcode
+
+License
+This project is licensed under the GPL-3.0 License.
+
+The original Y2JB base code remains under its original MIT License (see LICENSE-MIT).
+All unique modifications and additions in this fork are licensed under GPL-3.0.
+
+Disclaimer
+This tool is provided as-is for research and development purposes only. Use at your own risk. The developers are not responsible for any damage, data loss, or consequences resulting from the use of this software.
