@@ -90,7 +90,7 @@ Releases provide both `download0.dat` (raw UFS2 image, ~321 MB) and `download0.d
 
 ##### Default (Recommended): USB Installer Payload
 
-The standalone payload installs the image offline from a USB drive directly to the YouTube directory (`/user/download/PPSA0165*`). It automatically unzips the payload on the console if you use the `.zip` archive.
+The standalone payload (usb-y2jb-installer.elf) installs the image offline from a USB drive directly to the YouTube directory (`/user/download/PPSA0165*`). It automatically unzips the payload on the console if you use the `.zip` archive.
 
 1.  Format a USB drive as FAT32 or exFAT.
 2.  Place either `download0.dat.zip` or `download0.dat` on the root of your USB drive. (The compressed `.zip` is prioritized for faster transfer).
@@ -108,11 +108,8 @@ If you prefer deploying manually, transfer the uncompressed image over FTP:
     ```sh
     unzip download0.dat.zip
     ```
-2.  Connect to the PS5 via FTP and upload `download0.dat` to your YouTube title directory (e.g., `/user/download/PPSA01650/`).
+2.  Connect to the PS5 via FTP and upload `download0.dat` to your YouTube title directory (e.g., `/user/download/PPSA0165*/`).
 
-### Non-Jailbroken PS5
-
-If your console is not yet jailbroken, you must restore a system backup that has been pre-configured with this autoloader. After restoring, you can update the autoloader by FTPing `download0.dat` to `/user/download/PPSA0165*/download0.dat`.
 
 ## Building the USB Payload
 
