@@ -30,6 +30,15 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      # Must run right after checkout, before anything writes to the tree,
+      # so GIT_DIRTY is empty and RELEASE_VERSION uses the short hash form.
+      - name: Get version from Makefile
+        id: version
+        run: |
+          VERSION=$(make print-version BUILD_TYPE=stable)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved release version: ${VERSION}"
+
       - name: Install System Dependencies and Clang 18
         run: |
           sudo apt-get update
@@ -84,6 +93,7 @@ jobs:
             sync
             umount /mnt
             mdconfig -d -u "$MD"
+
       - name: Prepare Release Artifacts
         run: |
           mkdir -p build
@@ -107,7 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.target.outputs.tag }}
-          name: ${{ steps.target.outputs.tag }}
+          name: ${{ steps.version.outputs.version }}
           overwrite_files: true
           files: |
             build/download0.dat

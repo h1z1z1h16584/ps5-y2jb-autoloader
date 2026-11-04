@@ -11,3 +11,14 @@ y2jb_update/
 # Payload build outputs
 payload/*.o
 build/*.elf
+/build/
+/build_dir/
+/download0/
+/download0.dat
+/y2jb_update.zip
+/src/elfldr-ps5-*.elf
+/src/kexp-*.bin
+/src/ps5-unified-autoloader.elf
+/src/payloads/
+/src/usb-installer.elf
+*.bak

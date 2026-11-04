@@ -2,7 +2,7 @@ VERSION    := 1.0
 
 # Git info for versioning
 GIT_HASH   := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-GIT_DIRTY  := $(shell git status --porcelain 2>/dev/null)
+GIT_DIRTY  := $(shell git status --porcelain --untracked-files=no 2>/dev/null)
 BUILD_TYPE ?= dev
 ifeq ($(BUILD_TYPE),stable)
 RELEASE_VERSION := v$(VERSION)-$(if $(GIT_DIRTY),$(shell date +"%Y%m%d%H%M%S"),$(GIT_HASH))
