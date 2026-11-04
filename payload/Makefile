@@ -1,7 +1,7 @@
 PS5_PAYLOAD_SDK ?= /opt/ps5-payload-sdk
 
 TARGET := ../build/usb-y2jb-installer.elf
-SRCS := main.c
+SRCS := main.c miniz.c
 OBJS := $(SRCS:.c=.o)
 
 CFLAGS := -O2 -std=c11 -Wall -Wextra
