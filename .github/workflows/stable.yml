@@ -73,15 +73,17 @@ jobs:
         with:
           usesh: true
           run: |
+            set -e
             truncate -s 336789504 download0.dat
             MD=$(mdconfig -a -t vnode -f "$(pwd)/download0.dat")
-            newfs -O 2 -U "/dev/$MD"
+            newfs -O 2 -b 32768 -f 4096 "/dev/$MD"
             mount "/dev/$MD" /mnt
             cp -R download0/* /mnt/
+            chmod -R 777 /mnt/*
+            chmod 444 "/mnt/cache/splash_screen/aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=/splash.html"
             sync
             umount /mnt
             mdconfig -d -u "$MD"
-
       - name: Prepare Release Artifacts
         run: |
           mkdir -p build
