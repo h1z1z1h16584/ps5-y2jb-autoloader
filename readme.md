@@ -3,8 +3,6 @@
 </p>
 
 <h1 align="center">PS5 Y2JB Autoloader</h1>
-[![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/h1z1z1h16584/ps5-y2jb-autoloader)
-
 <h3 align="center">Fork of <a href="https://github.com/Gezine/Y2JB">Y2JB</a></h3>
 
 <p align="center">
