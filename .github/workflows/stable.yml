@@ -96,15 +96,17 @@ jobs:
 
       - name: Prepare Release Artifacts
         run: |
+          set -e
+          command -v zip >/dev/null 2>&1 || sudo apt-get install -y zip
           mkdir -p build
           mv y2jb_update.zip build/y2jb_update.zip
           mv download0.dat build/download0.dat
-          # Keep the raw UFS2 image AND ship a compressed copy.
-          # A fresh newfs image is mostly zeroed free space, so this
-          # compresses from ~321MB to ~1-2MB.
-          zip -9 build/download0.dat.zip download0.dat
-          rm -rf download0
+          ( cd build && zip -9 download0.dat.zip download0.dat )
           ls -lh build/
+          [ -f build/download0.dat ]     || { echo "ERROR: build/download0.dat missing"; exit 1; }
+          [ -f build/download0.dat.zip ] || { echo "ERROR: build/download0.dat.zip missing"; exit 1; }
+          [ -f build/y2jb_update.zip ]   || { echo "ERROR: build/y2jb_update.zip missing"; exit 1; }
+          [ -f build/usb-y2jb-installer.elf ] || echo "WARN: build/usb-y2jb-installer.elf missing"
       - name: Determine Target Tag
         id: target
         run: |
@@ -122,8 +124,22 @@ jobs:
           tag_name: ${{ steps.target.outputs.tag }}
           name: ${{ steps.version.outputs.version }}
           overwrite_files: true
+          body: |
+            ## ${{ steps.version.outputs.version }}
+
+            Automated stable build from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            ### Assets
+            - `download0.dat` — raw UFS2 image (~321 MB). FTP to `/user/download/PPSA0165*/`.
+            - `download0.dat.zip` — same image, zipped (~1–2 MB). **Extract before use.**
+            - `y2jb_update.zip` — place on the root of a USB drive to update the autoloader.
+            - `usb-y2jb-installer.elf` — standalone payload to install `download0.dat` from USB.
+
+            ### Recent changes
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/CHANGELOG.md) for the full history.
           files: |
             build/download0.dat
+            build/download0.dat.zip
             build/y2jb_update.zip
             build/usb-y2jb-installer.elf
         env:
