@@ -55,6 +55,27 @@ You can update the autoloader by simply placing **`y2jb_update.zip`** (from the 
 
 Installation is the same as the original [Y2JB](https://github.com/Gezine/Y2JB/blob/main/README.md) (remote loader).
 
+## USB Installer Payload
+
+A standalone payload is included to install `download0.dat` offline from an inserted USB drive directly to the YouTube directory on the console (`/user/download/PPSA0165*`).
+
+### Building the Payload
+Requires [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk).
+```bash
+./build_usb_payload.sh
+Usage
+Format a USB drive as exFAT or FAT32.
+
+Place download0.dat.zip or download0.dat onto the root of the USB drive.
+
+Insert the USB drive into your PS5.
+
+Send build/usb-y2jb-installer.elf to port 9021 on your console (e.g., using Netcat):
+
+Bash
+nc -w 3 <PS5_IP> 9021 < build/usb-y2jb-installer.elf
+
+
 
 ### Jailbroken PS5 (Webkit, Lua, BD-JB)
 
@@ -141,10 +162,6 @@ All unique modifications and additions in this fork are licensed under **GPL-3.0
 
 This tool is provided as-is for research and development purposes only. Use at your own risk. The developers are not responsible for any damage, data loss, or consequences resulting from the use of this software.
 
-## Donate
-- [donate to PLK](DONATE.md) (creator of this autoloader)
-- [donate to Gezine](https://github.com/sponsors/Gezine) (creator of the original [Y2JB](https://github.com/Gezine/Y2JB))
-
 ## USB Installer Payload
 
 A standalone payload is included to install `download0.dat` offline from an inserted USB drive directly to the YouTube directory on the console (`/user/download/PPSA0165*`).
@@ -156,7 +173,7 @@ Requires [ps5-payload-sdk](https://github.com/ps5-payload-dev/sdk).
 Usage
 Format a USB drive as exFAT or FAT32.
 
-Place download0.dat onto the root of the USB drive.
+Place download0.dat.zip or download0.dat onto the root of the USB drive.
 
 Insert the USB drive into your PS5.
 
